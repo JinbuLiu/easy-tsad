@@ -118,6 +118,8 @@ class AR(BaseMethod):
             avg_loss = 0
             loop = tqdm.tqdm(enumerate(train_loader),total=len(train_loader),leave=True)
             for idx, (x, target) in loop:
+                # x shape (BS, W)
+                # y shape (BS, 1)
                 x, target = x.to(self.device), target.to(self.device)
                 self.optimizer.zero_grad()
                 

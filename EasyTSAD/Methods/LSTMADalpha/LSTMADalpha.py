@@ -17,9 +17,9 @@ class LSTMModel(nn.Module):
     def __init__(self, window_size, input_size, 
                  hidden_dim, pred_len, num_layers, batch_size, device) -> None:
         super().__init__()
-        self.pred_len = pred_len
-        self.batch_size = batch_size
-        self.input_size = input_size
+        self.pred_len = pred_len           # number of time steps to be predicted
+        self.batch_size = batch_size       # number of samples in a batch
+        self.input_size = input_size       # input feature dimension 
         self.device = device
         
         self.lstm_encoder = nn.LSTM(input_size=input_size, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True)
@@ -179,6 +179,8 @@ class LSTMADalpha(BaseMethod):
             avg_loss = 0
             loop = tqdm.tqdm(enumerate(train_loader),total=len(train_loader),leave=True)
             for idx, (x, target) in loop:
+                # x shape (BatchSize, WinSize)
+                # y shape (BatchSize, PredSize)
                 x, target = x.to(self.device), target.to(self.device)
                 self.optimizer.zero_grad()
                 

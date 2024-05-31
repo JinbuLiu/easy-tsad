@@ -67,11 +67,11 @@ class UTSAllInOneDataset(torch.utils.data.Dataset):
         
         if phase == "train":
             for _, i in datas.items():
-                ll, = i.train.shape
-                self.sample_num += max(ll - self.window_size - self.horizon + 1, 0)
+                ll, = i.train.shape                                                   # get length of timeseries
+                self.sample_num += max(ll - self.window_size - self.horizon + 1, 0)   # use data in window to predict label in horizon
             
-            X = torch.zeros((self.sample_num, self.window_size))
-            Y = torch.zeros((self.sample_num, 1))
+            X = torch.zeros((self.sample_num, self.window_size))   # shape (S, W)
+            Y = torch.zeros((self.sample_num, 1))                  # shape (S, 1)
             
             cnt = 0
             for _, i in datas.items():
