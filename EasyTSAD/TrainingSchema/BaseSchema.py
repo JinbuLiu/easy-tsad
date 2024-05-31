@@ -46,8 +46,8 @@ class BaseSchema(object):
             "Data_Params" : {
                 "preprocess" : "raw",
                 "diff_order" : 0
-                }
             }
+        }
         
         use_cfg = False
         
@@ -105,7 +105,8 @@ class BaseSchema(object):
         """
         pass
     
-        
-                
-                
-                
+    def do_exp_all(self):
+        """
+        Performs the experiment for all datasets with the same model.
+        """
+        pass            

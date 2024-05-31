@@ -12,7 +12,7 @@ from ..Plots.plot import plot_uts_score_only
 from .logger import setup_logger
 from .PathManager import PathManager
 from ..DataFactory.LoadData import load_data
-from ..TrainingSchema import AllInOne, ZeroShot, Naive, ZeroShotCrossDS
+from ..TrainingSchema import AllInOne, ZeroShot, Naive
 from ..Summary import Summary
 
 class TSADController:
@@ -148,7 +148,7 @@ class TSADController:
         self.dc["dst_datasets"] = dst
     
         
-    def run_exps(self, method, training_schema, cfg_path=None, diff_order=None, preprocess=None, hparams=None):
+    def run_exps(self, method, training_schema, cfg_path=None, diff_order=None, preprocess=None, hparams=None, do_all=False):
         """
         Run experiments using the specified method and training schema.
 
@@ -175,13 +175,14 @@ class TSADController:
             run_instance = AllInOne(self.dc, method, cfg_path, diff_order, preprocess)
         elif training_schema == "zero_shot":
             run_instance = ZeroShot(self.dc, method, cfg_path, diff_order, preprocess)
-        elif training_schema == "zero_shot_cross_ds":
-            run_instance = ZeroShotCrossDS(self.dc, method, cfg_path, diff_order, preprocess)
         else:
             raise ValueError("Unknown \"training_schema\", must be one of naive, all_in_one, zero_shot\n")
         
         tsDatas = run_instance.load_data()
-        run_instance.do_exp(tsDatas=tsDatas, hparams=hparams)
+        if not do_all:
+            run_instance.do_exp(tsDatas=tsDatas, hparams=hparams)
+        else:
+            run_instance.do_exp_all(tsDatas=tsDatas, hparams=hparams)
         
     def set_evals(self, evals):
         '''

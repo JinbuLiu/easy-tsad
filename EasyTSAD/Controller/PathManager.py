@@ -48,6 +48,7 @@ class PathManager:
         self.__res_p = build_dir(current_dir, self.glo_cfg["Results"]["base_dir"])
         
         self.__score_dir = os.path.join(self.__res_p, self.glo_cfg["Results"]["score_dir"])
+        self.__model_dir = os.path.join(self.__res_p, self.glo_cfg["Results"]["model_dir"])
         self.__y_hat_dir = os.path.join(self.__res_p, self.glo_cfg["Results"]["y_hat_dir"])
         self.__plot_dir = os.path.join(self.__res_p, self.glo_cfg["Results"]["plot_dir"])
         self.__runtime_dir = os.path.join(self.__res_p, self.glo_cfg["Results"]["runtime_dir"])
@@ -111,6 +112,15 @@ class PathManager:
         if build is True:
             check_and_build(path)
         return os.path.join(path, "%s.npy"%curve_name)
+    
+    def get_model_path(self, method, schema, dataset=None, build=True):
+        if not dataset:
+            path = os.path.join(self.__model_dir, method, schema)
+        else:
+            path = os.path.join(self.__model_dir, method, schema, dataset)
+        if build is True:
+            check_and_build(path)
+        return os.path.join(path, "model.pt")
     
     def get_yhat_path(self, method, schema, dataset, curve_name):
         path = os.path.join(self.__y_hat_dir, method, schema, dataset)

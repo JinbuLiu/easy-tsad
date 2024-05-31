@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+
 from ..DataFactory import TSData
 
 class BaseMethodMeta(type):
@@ -14,6 +16,7 @@ class BaseMethodMeta(type):
     def __init__(cls, name, bases, attrs):
         super().__init__(name, bases, attrs)
         if name != 'BaseMethod':
+            print (f"register method {name}")
             BaseMethodMeta.registry[name] = cls
      
             
@@ -118,6 +121,13 @@ class BaseMethod(metaclass=BaseMethodMeta):
     
     def param_statistic(self, save_file):
         pass
+    
+    def save_model(self, save_path):
+        torch.save(self.model.state_dict(), save_path)
+        
+    def load_model(self, save_path):
+        self.model.load_state_dict(torch.load(save_path))        
+        
 
 # __all__ = ['AE', 'AnomalyTransformer', 'AR', 'Donut', 'EncDecAD', 'FCVAE', 'LSTMADalpha', 'LSTMADbeta', 'SRCNN', 'TFAD', 'TimesNet']
 

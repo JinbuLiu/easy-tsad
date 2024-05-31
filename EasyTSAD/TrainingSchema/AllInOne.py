@@ -3,9 +3,13 @@ import numpy as np
 import sys
 import logging
 
+from typing import Dict
+
 from .BaseSchema import BaseSchema
 from ..Methods import BaseMethodMeta
 from ..Controller.PathManager import PathManager
+from ..DataFactory import TSData
+
 
 class AllInOne(BaseSchema):
     def __init__(self, dc, method, cfg_path:str=None, diff_order:int=None, preprocess:str=None) -> None:
@@ -31,18 +35,18 @@ class AllInOne(BaseSchema):
                     specific_params = self.cfg["Model_Params"][dataset_name]
                     for k, v in specific_params.items():
                         model_params[k] = v
-                        
+                    
             if hparams is not None:
                 model_params = hparams
-            
-            self.train_valid_timer.reset_total()
-            self.test_timer.reset_total()
-            
+        
             self.logger.info("    [{}] training dataset {}".format(self.method, dataset_name))
             if self.method in BaseMethodMeta.registry:
                 method = BaseMethodMeta.registry[self.method](model_params)
             else:
                 raise ValueError("Unknown method class \"{}\". Ensure that the method name matches the class name exactly (including case sensitivity).".format(self.method))
+            
+            self.train_valid_timer.reset_total()
+            self.test_timer.reset_total()
             
             statistic_path = self.pm.get_rt_statistic_path(self.method, self.schema, dataset_name)
             method.param_statistic(statistic_path)
@@ -64,6 +68,9 @@ class AllInOne(BaseSchema):
                 
                 ## save scores and evaluation
                 np.save(score_path, score)
+                
+            model_path = self.pm.get_model_path(self.method, self.schema, dataset_name)
+            method.save_model(model_path)
                     
             # save running time info
             time_path = self.pm.get_rt_time_path(self.method, self.schema, dataset_name)
@@ -73,5 +80,55 @@ class AllInOne(BaseSchema):
             }
             with open(time_path, 'w') as f:
                 json.dump(time_dict, f, indent=4)
-                
         
+    def do_exp_all(self, tsDatas, hparams=None):
+        if "Model_Params" in self.cfg:
+            model_params = self.cfg["Model_Params"]["Default"]
+        if hparams is not None:
+            model_params = hparams
+            
+        self.logger.info("    [{}] training all dataset. Ignore dataset's params".format(self.method))
+        if self.method in BaseMethodMeta.registry:
+            method = BaseMethodMeta.registry[self.method](model_params)
+        else:
+            raise ValueError("Unknown method class \"{}\". Ensure that the method name matches the class name exactly (including case sensitivity).".format(self.method))
+        
+        self.train_valid_timer.reset_total()
+        self.test_timer.reset_total()
+        
+        ts_data: Dict[str, TSData] = {}
+        for dataset_name, value in tsDatas.items():
+            for curve_name, curve in value.items():
+                ts_data[f"{dataset_name}/{curve_name}"] = curve
+                
+        statistic_path = self.pm.get_rt_statistic_path(self.method, self.schema, "all")
+        method.param_statistic(statistic_path)
+        
+        self.train_valid_timer.tic()
+        method.train_valid_phase_all_in_one(tsTrains=ts_data)
+        self.train_valid_timer.toc()
+        
+        for name, curve in ts_data.items():
+            dataset_name, curve_name = name.split("/")
+            score_path = self.pm.get_score_path(self.method, self.schema, dataset_name, curve_name)
+            
+            ## test phase
+            self.test_timer.tic()
+            method.test_phase(curve)
+            self.test_timer.toc()
+            
+            score = method.anomaly_score()
+            
+            np.save(score_path, score)
+            
+        model_path = self.pm.get_model_path(self.method, self.schema, "all")
+        method.save_model(model_path)
+        
+        # save running time info
+        time_path = self.pm.get_rt_time_path(self.method, self.schema, "all")
+        time_dict = {
+            "train_and_valid": self.train_valid_timer.get_total_time(),
+            "test": self.test_timer.get_total_time()
+        }
+        with open(time_path, 'w') as f:
+            json.dump(time_dict, f, indent=4)

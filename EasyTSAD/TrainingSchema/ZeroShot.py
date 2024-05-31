@@ -7,6 +7,7 @@ import math
 from .BaseSchema import BaseSchema
 from ..Methods import BaseMethodMeta
 from ..Controller.PathManager import PathManager
+from ..DataFactory import TSData
 
 def dict_split(logger, src:Dict, proportion: float, seed=1):
     keys = list(src.keys())
@@ -100,4 +101,60 @@ class ZeroShot(BaseSchema):
             with open(time_path, 'w') as f:
                 json.dump(time_dict, f, indent=4)
                 
+    def do_exp_all(self, tsDatas, hparams=None):
+        if "Model_Params" in self.cfg:
+            model_params = self.cfg["Model_Params"]["Default"]
+        if hparams is not None:
+            model_params = hparams
+            
+        self.logger.info("    [{}] training all dataset. Ignore dataset's params".format(self.method))
+        if self.method in BaseMethodMeta.registry:
+            method = BaseMethodMeta.registry[self.method](model_params)
+        else:
+            raise ValueError("Unknown method class \"{}\". Ensure that the method name matches the class name exactly (including case sensitivity).".format(self.method))
         
+        self.train_valid_timer.reset_total()
+        self.test_timer.reset_total()
+        
+        statistic_path = self.pm.get_rt_statistic_path(self.method, self.schema, "all")
+        method.param_statistic(statistic_path)
+        
+        tsTrain: Dict[str, TSData] = {}
+        tsTest: Dict[str, TSData] = {}
+        for dataset_name, value in tsDatas.items():
+            if dataset_name in self.transfer_config:
+                transfer_params = self.transfer_config[dataset_name]
+            else:
+                transfer_params = self.transfer_config["Default"]
+            
+            tsTrain_, tsTest_ = dict_split(self.logger, value, transfer_params["proportion"], transfer_params["random_seed"])
+            for curve_name, curve in tsTrain_.items():
+                tsTrain[f"{dataset_name}/{curve_name}"] = curve
+            for curve_name, curve in tsTest_.items():
+                tsTest[f"{dataset_name}/{curve_name}"] = curve
+        
+        self.train_valid_timer.tic()
+        method.train_valid_phase_all_in_one(tsTrains=tsTrain)
+        self.train_valid_timer.toc()
+        
+        for name, curve in tsTest.items():
+            dataset_name, curve_name = name.split("/")
+            score_path = self.pm.get_score_path(self.method, self.schema, dataset_name, curve_name)
+            
+            ## test phase
+            self.test_timer.tic()
+            method.test_phase(curve)
+            self.test_timer.toc()
+            
+            score = method.anomaly_score()
+            
+            np.save(score_path, score)
+        
+        # save running time info
+        time_path = self.pm.get_rt_time_path(self.method, self.schema, "all")
+        time_dict = {
+            "train_and_valid": self.train_valid_timer.get_total_time(),
+            "test": self.test_timer.get_total_time()
+        }
+        with open(time_path, 'w') as f:
+            json.dump(time_dict, f, indent=4)

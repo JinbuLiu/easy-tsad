@@ -73,5 +73,8 @@ class Naive(BaseSchema):
             }
             with open(time_path, 'w') as f:
                 json.dump(time_dict, f, indent=4)
-                
+    
+    def do_exp_all(self, tsDatas, hparams=None):
+        self.logger.info("    [{}] don't support do_exp_all, change to do_exp".format(self.method))
+        self.do_exp(tsDatas, hparams)
                 
