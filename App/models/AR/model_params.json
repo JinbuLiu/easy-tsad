@@ -1,0 +1,5 @@
+{
+    "win_size": 16,
+    "horizon": 1,
+    "batch_size": 128
+}
